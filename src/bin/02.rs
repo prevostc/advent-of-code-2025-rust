@@ -27,8 +27,8 @@ pub fn part_one(input: &str) -> Option<u64> {
 
 pub fn part_two(input: &str) -> Option<u64> {
     let res = stream_input(input)
-        .flat_map(|range| range.into_iter())
         .par_bridge()
+        .flat_map(|range| range.into_iter())
         .filter(|&i| {
             let digits = i.to_string().into_bytes();
             (1..=digits.len() / 2)
