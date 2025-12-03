@@ -12,19 +12,17 @@ fn solve<const N: usize>(line: &[u8]) -> u64 {
     let mut result = 0u64;
     let mut last_idx = 0usize;
 
-    for pos in 0..N {
-        let end = line.len() - (N - pos - 1);
-        let mut max_digit = 0u8;
-        let mut max_idx = last_idx;
-        for (i, &digit) in line[last_idx..end].iter().enumerate() {
-            if digit > max_digit {
-                max_digit = digit;
-                max_idx = last_idx + i;
-            }
-        }
-
-        result = result * 10 + max_digit as u64;
-        last_idx = max_idx + 1;
+    for n in 0..N {
+        let beg = if n == 0 { 0 } else { last_idx + 1 };
+        let end = line.len() - (N - n);
+        let (idx, &digit) = line[beg..=end]
+            .into_iter()
+            .enumerate()
+            .rev()
+            .max_by(|(_, a), (_, b)| a.cmp(b))
+            .unwrap();
+        result = result * 10 + digit as u64;
+        last_idx = beg + idx;
     }
 
     result
