@@ -1,51 +1,41 @@
-use std::cmp::max;
-
 advent_of_code::solution!(3);
 
-fn stream_input(input: &str) -> impl Iterator<Item = Vec<u8>> {
-    input
-        .lines()
-        .map(|line| line.trim())
-        .filter(|line| !line.is_empty())
-        .map(|line| {
-            line.chars()
-                .map(|c| c.to_digit(10).unwrap() as u8)
-                .collect::<Vec<u8>>()
-        })
+fn stream_input(input: &str) -> impl Iterator<Item = Vec<u8>> + '_ {
+    input.lines().map(|line| {
+        line.chars()
+            .map(|c| c.to_digit(10).unwrap() as u8)
+            .collect()
+    })
 }
 
-fn solve<const N: usize>(line: Vec<u8>) -> u64 {
-    let mut digits = [(0, 0); N]; // (digit value, index in line)
-    for i in 0..N {
-        let i_idx = line.len() - (N - i);
-        digits[i] = (line[i_idx], i_idx);
-    }
+fn solve<const N: usize>(line: &[u8]) -> u64 {
+    let mut result = 0u64;
+    let mut last_idx = 0usize;
 
-    for n in 0..N {
-        // find max digit in the available range
-        let (mut n_max, n_idx) = digits[n];
-        let min_idx = max(n, if n > 0 { digits[n - 1].1 + 1 } else { 0 });
-        let max_idx = n_idx - 1;
-        for i in (min_idx..=max_idx).rev() {
-            let next_digit = line[i];
-            if next_digit >= n_max {
-                digits[n] = (next_digit, i);
-                n_max = next_digit;
+    for pos in 0..N {
+        let end = line.len() - (N - pos - 1);
+        let mut max_digit = 0u8;
+        let mut max_idx = last_idx;
+        for (i, &digit) in line[last_idx..end].iter().enumerate() {
+            if digit > max_digit {
+                max_digit = digit;
+                max_idx = last_idx + i;
             }
         }
+
+        result = result * 10 + max_digit as u64;
+        last_idx = max_idx + 1;
     }
 
-    let res = digits
-        .into_iter()
-        .fold(0, |acc, (d, _)| acc * 10 + d as u64);
-    res
+    result
 }
 
 pub fn part_one(input: &str) -> Option<u64> {
-    Some(stream_input(input).map(|line| solve::<2>(line)).sum())
+    Some(stream_input(input).map(|line| solve::<2>(&line)).sum())
 }
+
 pub fn part_two(input: &str) -> Option<u64> {
-    Some(stream_input(input).map(|line| solve::<12>(line)).sum())
+    Some(stream_input(input).map(|line| solve::<12>(&line)).sum())
 }
 
 #[cfg(test)]
