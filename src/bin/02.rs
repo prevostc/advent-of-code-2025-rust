@@ -1,14 +1,34 @@
 advent_of_code::solution!(2);
 
+use num::Integer;
 use rayon::prelude::*;
 use std::ops::RangeInclusive;
 
-fn stream_input(input: &str) -> impl Iterator<Item = RangeInclusive<usize>> {
+const POW10: [u64; 16] = [
+    1,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    100_000_000,
+    1_000_000_000,
+    10_000_000_000,
+    100_000_000_000,
+    1_000_000_000_000,
+    10_000_000_000_000,
+    100_000_000_000_000,
+    1_000_000_000_000_000,
+];
+
+fn stream_input(input: &str) -> impl Iterator<Item = RangeInclusive<u64>> {
     input
         .split(',')
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
-        .map(|s| s.split('-').map(|s| s.parse::<usize>().unwrap()))
+        .map(|s| s.split('-').map(|s| s.parse::<u64>().unwrap()))
         .map(|mut iter| (iter.next().unwrap(), iter.next().unwrap()))
         .map(|(start, end)| start..=end)
 }
@@ -17,30 +37,32 @@ pub fn part_one(input: &str) -> Option<u64> {
     let res = stream_input(input)
         .par_bridge()
         .flat_map(|range| range.into_iter())
-        .filter(|i| {
-            let digits = i.to_string().into_bytes();
-            digits.len() % 2 == 0 && digits[0..digits.len() / 2] == digits[digits.len() / 2..]
+        .filter(|num| {
+            let digits = num.ilog10() + 1;
+            let (q, r) = num.div_mod_floor(&POW10[(digits / 2) as usize]);
+            q == r
         })
-        .sum::<usize>();
+        .sum::<u64>();
     Some(res as u64)
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
     let res = stream_input(input)
         .par_bridge()
-        .flat_map(|range| range.into_iter())
+        .flat_map(|range| range)
         .filter(|&i| {
-            let digits = i.to_string().into_bytes();
-            (1..=digits.len() / 2)
-                .filter(|&size| digits.len() % size == 0)
-                .any(|size| {
-                    let mut chunks = digits.chunks(size);
-                    chunks
-                        .next()
-                        .map_or(false, |first| chunks.all(|chunk| chunk == first))
-                })
+            let n = i;
+            let len = (n.ilog10() + 1) as usize;
+            (1..=len / 2).any(|l| {
+                len.is_multiple_of(l) && {
+                    let shift = POW10[l];
+                    let prefix = n / POW10[len - l];
+                    let multiplier = (POW10[len] - 1) / (shift - 1); // geometric series
+                    prefix * multiplier == n
+                }
+            })
         })
-        .sum::<usize>();
+        .sum::<u64>();
     Some(res as u64)
 }
 
