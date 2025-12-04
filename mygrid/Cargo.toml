@@ -1,0 +1,13 @@
+[package]
+name = "mygrid"
+version = "0.0.1"
+publish = false
+
+[lib]
+name = "mygrid"
+test = true
+plugin = false
+
+[dependencies]
+heapless = "0.8.0"
+rayon = "1.10.0"

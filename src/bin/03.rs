@@ -1,11 +1,9 @@
 advent_of_code::solution!(3);
 
 fn stream_input(input: &str) -> impl Iterator<Item = Vec<u8>> + '_ {
-    input.lines().map(|line| {
-        line.chars()
-            .map(|c| c.to_digit(10).unwrap() as u8)
-            .collect()
-    })
+    input
+        .lines()
+        .map(|line| line.chars().map(|c| c as u8 - b'0').collect())
 }
 
 fn solve<const N: usize>(line: &[u8]) -> u64 {
