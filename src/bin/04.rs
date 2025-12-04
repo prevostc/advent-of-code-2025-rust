@@ -1,5 +1,6 @@
+use std::collections::VecDeque;
+
 use mygrid::{direction::ALL_AROUND, grid::Grid, point::Point};
-use rayon::iter::ParallelIterator;
 
 advent_of_code::solution!(4);
 
@@ -20,7 +21,7 @@ fn is_removable(grid: &Grid<u8>, p: Point) -> bool {
 pub fn part_one(input: &str) -> Option<u64> {
     let grid = Grid::new_from_str(input, |c| c as u8);
     let res = grid
-        .par_iter_item_and_position()
+        .iter_item_and_position()
         .filter(|(_, c)| **c == b'@')
         .filter(|(p, _)| is_removable(&grid, *p))
         .count();
@@ -28,28 +29,40 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    let mut grid = Grid::new_from_str(input, |c| c as u8);
-
-    let mut all_rolls = grid
-        .iter_item_and_position()
-        .filter(|&(_, c)| *c == b'@')
-        .map(|(p, _)| (false, p))
-        .collect::<Vec<_>>();
-
-    let mut total_removed: u64 = 0;
-    let mut removed_count = 1;
-    while removed_count > 0 {
-        for &mut (ref mut removed, p) in all_rolls.iter_mut() {
-            if is_removable(&grid, p) {
-                grid[p] = b'.';
-                *removed = true;
+    let grid = Grid::new_from_str(input, |c| c as u8);
+    let mut q = VecDeque::with_capacity(grid.width * grid.height);
+    let mut grid_count = Grid::new(grid.width, grid.height, 0_isize);
+    for (p, c) in grid.iter_item_and_position() {
+        if *c == b'@' {
+            let count = ALL_AROUND
+                .iter()
+                .filter(|&d| Some(&b'@') == grid.get_item(p + *d))
+                .count() as isize;
+            grid_count[p] = count;
+            if count > 0 && count < 4 {
+                q.push_back(p);
             }
         }
+    }
 
-        let len_before = all_rolls.len();
-        all_rolls.retain(|&(removed, _)| !removed);
-        removed_count = len_before - all_rolls.len();
-        total_removed += removed_count as u64;
+    let mut total_removed: u64 = 0;
+    while let Some(p) = q.pop_front() {
+        if grid_count[p] < 0 {
+            continue;
+        }
+
+        grid_count[p] = -1;
+        total_removed += 1;
+        // update neighbors counts
+        for d in ALL_AROUND {
+            let p_d = p + d;
+            if let Some(count) = grid_count.get_item_mut(p_d) {
+                *count -= 1;
+                if *count > 0 && *count < 4 {
+                    q.push_back(p_d);
+                }
+            }
+        }
     }
     Some(total_removed)
 }

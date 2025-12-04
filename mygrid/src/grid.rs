@@ -218,6 +218,15 @@ impl<T> Grid<T> {
             None
         }
     }
+
+    #[inline]
+    pub fn get_item_mut(&mut self, point: Point) -> Option<&mut T> {
+        if self.is_in_bounds(point) {
+            Some(&mut self.content[((point.line as usize) * self.width) + (point.column as usize)])
+        } else {
+            None
+        }
+    }
 }
 
 impl<T> Index<Point> for Grid<T> {

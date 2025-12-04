@@ -29,6 +29,7 @@ pico-args = "0.5.0"
 rayon = "1.11.0"
 tinyjson = "2.5.1"
 mygrid = { version = "0.0.1", path = "mygrid" }
+indexmap = "2.12.1"
 
 # Solution dependencies
 
