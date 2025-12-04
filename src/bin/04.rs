@@ -32,24 +32,26 @@ pub fn part_two(input: &str) -> Option<u64> {
 
     let mut all_rolls = grid
         .iter_item_and_position()
-        .filter(|(_, c)| **c == b'@')
+        .filter(|&(_, c)| *c == b'@')
         .map(|(p, _)| (false, p))
         .collect::<Vec<_>>();
 
-    let mut removed_one = true;
-    let mut count = 0;
-    while removed_one {
-        removed_one = false;
-        for (removed, p) in all_rolls.iter_mut() {
-            if !*removed && is_removable(&grid, *p) {
-                grid[*p] = b'.';
+    let mut total_removed: u64 = 0;
+    let mut removed_count = 1;
+    while removed_count > 0 {
+        for &mut (ref mut removed, p) in all_rolls.iter_mut() {
+            if is_removable(&grid, p) {
+                grid[p] = b'.';
                 *removed = true;
-                removed_one = true;
-                count += 1;
             }
         }
+
+        let len_before = all_rolls.len();
+        all_rolls.retain(|&(removed, _)| !removed);
+        removed_count = len_before - all_rolls.len();
+        total_removed += removed_count as u64;
     }
-    Some(count as u64)
+    Some(total_removed)
 }
 
 #[cfg(test)]
