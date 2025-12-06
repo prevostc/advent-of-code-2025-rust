@@ -25,6 +25,18 @@ impl Point {
     }
 
     #[inline]
+    pub const fn new_i64(line: i64, column: i64) -> Self {
+        assert!(line >= 0);
+        assert!(column >= 0);
+        Point::new(line as isize, column as isize)
+    }
+
+    #[inline]
+    pub const fn new_u64(line: u64, column: u64) -> Self {
+        Point::new(line as isize, column as isize)
+    }
+
+    #[inline]
     pub const fn new_usize(line: usize, column: usize) -> Self {
         Point::new(line as isize, column as isize)
     }
