@@ -22,6 +22,7 @@ impl<T> Grid<T> {
             content: vec![default; width * height],
         }
     }
+
     #[inline]
     pub fn new_from_str<F>(input: &str, map_char: F) -> Self
     where
