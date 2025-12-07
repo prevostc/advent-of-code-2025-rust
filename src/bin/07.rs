@@ -13,11 +13,8 @@ fn solve(input: &str) -> (u64, u64) {
 
     while let Some(line) = lines.next() {
         let line = line.as_bytes();
-        beams
-            .iter()
-            .enumerate()
-            .filter(|&(_, &beam)| beam > 0)
-            .for_each(|(col, &beam)| match line[col] {
+        for (col, &beam) in beams.iter().enumerate().filter(|&(_, &beam)| beam > 0) {
+            match line[col] {
                 b'^' => {
                     if col > 0 {
                         next_beams[col - 1] += beam;
@@ -31,7 +28,8 @@ fn solve(input: &str) -> (u64, u64) {
                     next_beams[col] += beam;
                 }
                 _ => unreachable!(),
-            });
+            }
+        }
         (beams, next_beams) = (next_beams, beams);
         next_beams.fill(0);
     }
