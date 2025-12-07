@@ -1,6 +1,140 @@
 advent_of_code::solution!(7);
 
 #[allow(unused)]
+#[allow(unsafe_op_in_unsafe_fn)]
+pub unsafe fn solve(input: &str) -> (usize, usize) {
+    let bytes = input.as_bytes();
+    let len = bytes.len();
+    let mut idx: usize = 0;
+    let mut start: usize = 0;
+    loop {
+        idx += 1;
+        match *bytes.get_unchecked(idx) {
+            b'S' => start = idx,
+            b'\n' => break,
+            _ => {}
+        }
+    }
+
+    let width = idx;
+    let mut splits: usize = 0;
+    let mut beams = vec![0_usize; width];
+    let mut next_beams = vec![0_usize; width];
+
+    let mut col = start;
+    *beams.get_unchecked_mut(col) = 1;
+    idx += start + 1;
+    // skip row 2
+    idx += width + 1;
+
+    let mut col_skip: isize = start as isize - 1;
+
+    while idx < len {
+        let c = *bytes.get_unchecked(idx);
+        idx += 1;
+
+        if c == b'\n' {
+            idx += width + 1 /* one row is guaranteed to be empty */;
+            idx += col_skip as usize;
+            col = col_skip as usize;
+            col_skip -= 1;
+            std::mem::swap(&mut beams, &mut next_beams);
+            next_beams.fill(0);
+            continue;
+        }
+
+        let beam = *beams.get_unchecked(col);
+        if beam != 0 {
+            match c {
+                b'^' => {
+                    // input data is guaranteed to not have ^ at the edges
+                    *next_beams.get_unchecked_mut(col - 1) += beam;
+                    *next_beams.get_unchecked_mut(col + 1) += beam;
+                    splits += 1;
+                }
+                b'.' => {
+                    *next_beams.get_unchecked_mut(col) += beam;
+                }
+                _ => (),
+            }
+        }
+        col += 1;
+    }
+
+    let timelines = beams.iter().sum::<usize>();
+
+    (splits, timelines)
+}
+
+#[inline(never)]
+pub fn part_one(input: &str) -> Option<u64> {
+    let (splits, _) = unsafe { solve(input) };
+    Some(splits as u64)
+}
+
+#[inline(never)]
+pub fn part_two(input: &str) -> Option<u64> {
+    let (_, timelines) = unsafe { solve(input) };
+    Some(timelines as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_safe() {
+        let result = solve_safe(&advent_of_code::template::read_file("examples", DAY));
+        assert_eq!(result, (21, 40));
+    }
+
+    #[test]
+    fn test_safe_col_skip() {
+        let result = solve_safe_col_skip(&advent_of_code::template::read_file("examples", DAY));
+        assert_eq!(result, (21, 40));
+    }
+
+    #[test]
+    fn test_single_pass() {
+        let result =
+            unsafe { solve_single_pass(&advent_of_code::template::read_file("examples", DAY)) };
+        assert_eq!(result, (21, 40));
+    }
+
+    #[test]
+    fn test_bounded_tree_single_pass() {
+        let result = unsafe { solve(&advent_of_code::template::read_file("examples", DAY)) };
+        assert_eq!(result, (21, 40));
+    }
+
+    #[test]
+    fn test_bounded_tree_single_pass_one_beams_array() {
+        let result = unsafe {
+            solve_bounded_tree_single_pass_one_beams_array(&advent_of_code::template::read_file(
+                "examples", DAY,
+            ))
+        };
+        assert_eq!(result, (21, 40));
+    }
+
+    #[test]
+    fn test_bounded_tree_single_pass_raw_ptr() {
+        let result = unsafe {
+            solve_bounded_tree_single_pass_raw_ptr(&advent_of_code::template::read_file(
+                "examples", DAY,
+            ))
+        };
+        assert_eq!(result, (21, 40));
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///
+///  Slower solutions for reference
+///
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#[allow(unused)]
 fn solve_safe(input: &str) -> (u64, u64) {
     // one of 2 rows is guaranteed to be empty
     let mut lines = input.lines().step_by(2);
@@ -117,72 +251,6 @@ pub unsafe fn solve_single_pass(input: &str) -> (usize, usize) {
         if c == b'\n' {
             col = 0;
             idx += width + 1 /* one row is guaranteed to be empty */;
-            std::mem::swap(&mut beams, &mut next_beams);
-            next_beams.fill(0);
-            continue;
-        }
-
-        let beam = *beams.get_unchecked(col);
-        if beam != 0 {
-            match c {
-                b'^' => {
-                    // input data is guaranteed to not have ^ at the edges
-                    *next_beams.get_unchecked_mut(col - 1) += beam;
-                    *next_beams.get_unchecked_mut(col + 1) += beam;
-                    splits += 1;
-                }
-                b'.' => {
-                    *next_beams.get_unchecked_mut(col) += beam;
-                }
-                _ => (),
-            }
-        }
-        col += 1;
-    }
-
-    let timelines = beams.iter().sum::<usize>();
-
-    (splits, timelines)
-}
-
-#[allow(unused)]
-#[allow(unsafe_op_in_unsafe_fn)]
-pub unsafe fn solve_bounded_tree_single_pass(input: &str) -> (usize, usize) {
-    let bytes = input.as_bytes();
-    let len = bytes.len();
-    let mut idx: usize = 0;
-    let mut start: usize = 0;
-    loop {
-        idx += 1;
-        match *bytes.get_unchecked(idx) {
-            b'S' => start = idx,
-            b'\n' => break,
-            _ => {}
-        }
-    }
-
-    let width = idx;
-    let mut splits: usize = 0;
-    let mut beams = vec![0_usize; width];
-    let mut next_beams = vec![0_usize; width];
-
-    let mut col = start;
-    *beams.get_unchecked_mut(col) = 1;
-    idx += start + 1;
-    // skip row 2
-    idx += width + 1;
-
-    let mut col_skip: isize = start as isize - 1;
-
-    while idx < len {
-        let c = *bytes.get_unchecked(idx);
-        idx += 1;
-
-        if c == b'\n' {
-            idx += width + 1 /* one row is guaranteed to be empty */;
-            idx += col_skip as usize;
-            col = col_skip as usize;
-            col_skip -= 1;
             std::mem::swap(&mut beams, &mut next_beams);
             next_beams.fill(0);
             continue;
@@ -344,68 +412,4 @@ pub unsafe fn solve_bounded_tree_single_pass_one_beams_array(input: &str) -> (us
     let timelines = beams[(beams.len() - width - 1)..].iter().sum::<usize>();
 
     (splits, timelines)
-}
-
-#[inline(never)]
-pub fn part_one(input: &str) -> Option<u64> {
-    let (splits, _) = unsafe { solve_bounded_tree_single_pass(input) };
-    Some(splits as u64)
-}
-
-#[inline(never)]
-pub fn part_two(input: &str) -> Option<u64> {
-    let (_, timelines) = unsafe { solve_bounded_tree_single_pass(input) };
-    Some(timelines as u64)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_safe() {
-        let result = solve_safe(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, (21, 40));
-    }
-
-    #[test]
-    fn test_safe_col_skip() {
-        let result = solve_safe_col_skip(&advent_of_code::template::read_file("examples", DAY));
-        assert_eq!(result, (21, 40));
-    }
-
-    #[test]
-    fn test_single_pass() {
-        let result =
-            unsafe { solve_single_pass(&advent_of_code::template::read_file("examples", DAY)) };
-        assert_eq!(result, (21, 40));
-    }
-
-    #[test]
-    fn test_bounded_tree_single_pass() {
-        let result = unsafe {
-            solve_bounded_tree_single_pass(&advent_of_code::template::read_file("examples", DAY))
-        };
-        assert_eq!(result, (21, 40));
-    }
-
-    #[test]
-    fn test_bounded_tree_single_pass_one_beams_array() {
-        let result = unsafe {
-            solve_bounded_tree_single_pass_one_beams_array(&advent_of_code::template::read_file(
-                "examples", DAY,
-            ))
-        };
-        assert_eq!(result, (21, 40));
-    }
-
-    #[test]
-    fn test_bounded_tree_single_pass_raw_ptr() {
-        let result = unsafe {
-            solve_bounded_tree_single_pass_raw_ptr(&advent_of_code::template::read_file(
-                "examples", DAY,
-            ))
-        };
-        assert_eq!(result, (21, 40));
-    }
 }
