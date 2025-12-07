@@ -57,16 +57,23 @@ fn bench<I: Copy, T>(func: impl Fn(I) -> T, input: I, base_time: &Duration) -> (
     let _ = stdout.flush();
 
     let bench_iterations =
-        (Duration::from_secs(1).as_nanos() / cmp::max(base_time.as_nanos(), 10)).clamp(10, 10000);
+        (Duration::from_secs(1).as_nanos() / cmp::max(base_time.as_nanos(), 10)).clamp(10, 100000);
 
     let mut timers: Vec<Duration> = vec![];
 
+    // warm up
+    for _ in 0..100 {
+        black_box(func(black_box(input)));
+    }
+
+    // time the actual benching
     for _ in 0..bench_iterations {
         let timer = Instant::now();
         black_box(func(black_box(input)));
         timers.push(timer.elapsed());
     }
 
+    // remove the minimum and maximum N durations
     (
         #[allow(clippy::cast_possible_truncation)]
         Duration::from_nanos(average_duration(&timers) as u64),
