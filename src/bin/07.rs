@@ -209,11 +209,11 @@ pub unsafe fn solve_bounded_tree_single_pass(input: &str) -> (usize, usize) {
 
 #[allow(unsafe_op_in_unsafe_fn)]
 pub unsafe fn solve_bounded_tree_single_pass_raw_ptr(input: &str) -> (usize, usize) {
-    let bytes = input.as_bytes();
-    let len = bytes.len();
-    let init_ptr = bytes.as_ptr();
+    let len = input.len();
+    let init_ptr = input.as_ptr();
+
+    let mut ptr = init_ptr;
     let stop = init_ptr.add(len);
-    let mut ptr = bytes.as_ptr();
     let mut col: usize = 0;
     loop {
         ptr = ptr.add(1);
@@ -274,6 +274,72 @@ pub unsafe fn solve_bounded_tree_single_pass_raw_ptr(input: &str) -> (usize, usi
     (splits, timelines)
 }
 
+#[allow(unsafe_op_in_unsafe_fn)]
+pub unsafe fn solve_bounded_tree_single_pass_one_beams_array(input: &str) -> (usize, usize) {
+    let bytes = input.as_bytes();
+    let len = bytes.len();
+    let mut idx: usize = 0;
+    let mut start: usize = 0;
+    loop {
+        idx += 1;
+        match *bytes.get_unchecked(idx) {
+            b'S' => start = idx,
+            b'\n' => break,
+            _ => {}
+        }
+    }
+
+    let width = idx;
+    let mut splits: usize = 0;
+    // build beams so that idx also indexes into the beams array
+    // and we don't need to remember "col"
+    let mut beams = vec![0_usize; len / 2];
+
+    idx += 1; // skip \n
+    idx += width + 1; // skip 1 row
+    idx += start; // skip to start 
+    let mut beam_idx = idx % (width + 1);
+    *beams.get_unchecked_mut(beam_idx) = 1;
+
+    let mut col_skip: isize = start as isize - 1;
+
+    while idx < len {
+        let c = *bytes.get_unchecked(idx);
+        idx += 1;
+
+        if c == b'\n' {
+            idx += width + 1 /* one row is guaranteed to be empty */;
+            idx += col_skip as usize;
+            beam_idx += col_skip as usize;
+            beam_idx += 1;
+            col_skip -= 1;
+            continue;
+        }
+
+        let beam = *beams.get_unchecked(beam_idx);
+        beam_idx += 1;
+
+        if beam != 0 {
+            match c {
+                b'^' => {
+                    // input data is guaranteed to not have ^ at the edges
+                    *beams.get_unchecked_mut(beam_idx + width - 1) += beam;
+                    *beams.get_unchecked_mut(beam_idx + width + 1) += beam;
+                    splits += 1;
+                }
+                b'.' => {
+                    *beams.get_unchecked_mut(beam_idx + width) += beam;
+                }
+                _ => (),
+            }
+        }
+    }
+
+    let timelines = beams[(beams.len() - width - 1)..].iter().sum::<usize>();
+
+    (splits, timelines)
+}
+
 #[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     let (splits, _) = unsafe { solve_bounded_tree_single_pass(input) };
@@ -313,6 +379,16 @@ mod tests {
     fn test_bounded_tree_single_pass() {
         let result = unsafe {
             solve_bounded_tree_single_pass(&advent_of_code::template::read_file("examples", DAY))
+        };
+        assert_eq!(result, (21, 40));
+    }
+
+    #[test]
+    fn test_bounded_tree_single_pass_one_beams_array() {
+        let result = unsafe {
+            solve_bounded_tree_single_pass_one_beams_array(&advent_of_code::template::read_file(
+                "examples", DAY,
+            ))
         };
         assert_eq!(result, (21, 40));
     }
