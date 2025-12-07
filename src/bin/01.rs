@@ -10,6 +10,7 @@ fn stream_input(input: &str) -> impl Iterator<Item = isize> {
         .filter(|&value| value != 0)
 }
 
+#[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     let (_, res) = stream_input(input).fold((50, 0), |(c, r), v| {
         let n = (c + v % 100).rem_euclid(100);
@@ -18,6 +19,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(res)
 }
 
+#[inline(never)]
 pub fn part_two(input: &str) -> Option<u64> {
     let (_, res) = stream_input(input).fold((50, 0), |(c, r), v| {
         let n = (c + v % 100).rem_euclid(100);

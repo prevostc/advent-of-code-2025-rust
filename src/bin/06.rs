@@ -19,6 +19,7 @@ fn op_fold(acc: u64, item: u64, op: char) -> u64 {
     }
 }
 
+#[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     let mut chars = input.chars();
     let mut data = Vec::with_capacity(1000);
@@ -49,6 +50,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(total)
 }
 
+#[inline(never)]
 pub fn part_two(input: &str) -> Option<u64> {
     let mut nums = Vec::with_capacity(1000);
     let mut col_idx = 0;

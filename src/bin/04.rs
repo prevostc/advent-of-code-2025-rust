@@ -18,6 +18,7 @@ fn is_removable(grid: &Grid<u8>, p: Point) -> bool {
     true
 }
 
+#[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     let grid = Grid::new_from_str(input, |c| c as u8);
     let res = grid
@@ -28,6 +29,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(res as u64)
 }
 
+#[inline(never)]
 pub fn part_two(input: &str) -> Option<u64> {
     let grid = Grid::new_from_str(input, |c| c as u8);
     let mut q = VecDeque::with_capacity(grid.width * grid.height);

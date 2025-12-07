@@ -26,10 +26,12 @@ fn solve<const N: usize>(line: &[u8]) -> u64 {
     result
 }
 
+#[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     Some(stream_input(input).map(|line| solve::<2>(&line)).sum())
 }
 
+#[inline(never)]
 pub fn part_two(input: &str) -> Option<u64> {
     Some(stream_input(input).map(|line| solve::<12>(&line)).sum())
 }

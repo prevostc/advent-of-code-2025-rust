@@ -33,6 +33,7 @@ fn stream_input(input: &str) -> impl Iterator<Item = RangeInclusive<u64>> {
         .map(|(start, end)| start..=end)
 }
 
+#[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     let res = stream_input(input)
         .par_bridge()
@@ -46,6 +47,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(res as u64)
 }
 
+#[inline(never)]
 pub fn part_two(input: &str) -> Option<u64> {
     let res = stream_input(input)
         .par_bridge()

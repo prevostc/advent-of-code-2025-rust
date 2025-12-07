@@ -38,11 +38,13 @@ fn solve(input: &str) -> (u64, u64) {
     (splits, timelines)
 }
 
+#[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     let (splits, _) = solve(input);
     Some(splits)
 }
 
+#[inline(never)]
 pub fn part_two(input: &str) -> Option<u64> {
     let (_, timelines) = solve(input);
     Some(timelines)

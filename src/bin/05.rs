@@ -24,6 +24,7 @@ fn parse_input(input: &str) -> (Vec<IdRange>, impl Iterator<Item = u64>) {
     (ranges, numbers)
 }
 
+#[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     let (ranges, numbers) = parse_input(input);
 
@@ -40,6 +41,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(count)
 }
 
+#[inline(never)]
 pub fn part_two(input: &str) -> Option<u64> {
     let mut lines = input.lines();
 
