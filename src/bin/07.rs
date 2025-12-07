@@ -7,11 +7,12 @@ fn solve(input: &str) -> (u64, u64) {
     let start_col = grid.width / 2;
 
     let mut beams = vec![0u64; grid.width];
+    let mut next_beams = vec![0u64; grid.width];
     beams[start_col] = 1;
     let mut splits = 0;
 
     for row in 1..(grid.height - 1) {
-        let mut new_beams = vec![0u64; grid.width];
+        next_beams.fill(0);
         for col in 0..grid.width {
             if beams[col] == 0 {
                 continue;
@@ -19,20 +20,20 @@ fn solve(input: &str) -> (u64, u64) {
             match grid[Point::new_usize(row + 1, col)] {
                 '^' => {
                     if col > 0 {
-                        new_beams[col - 1] += beams[col];
+                        next_beams[col - 1] += beams[col];
                     }
                     if col + 1 < grid.width {
-                        new_beams[col + 1] += beams[col];
+                        next_beams[col + 1] += beams[col];
                     }
                     splits += 1;
                 }
                 '.' => {
-                    new_beams[col] += beams[col];
+                    next_beams[col] += beams[col];
                 }
                 _ => unreachable!(),
             }
         }
-        beams = new_beams;
+        std::mem::swap(&mut beams, &mut next_beams);
     }
 
     let timelines = beams.iter().sum::<u64>();
