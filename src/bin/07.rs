@@ -1,39 +1,39 @@
-use mygrid::{grid::Grid, point::Point};
-
 advent_of_code::solution!(7);
 
 fn solve(input: &str) -> (u64, u64) {
-    let grid = Grid::new_from_str(input, |c| c);
-    let start_col = grid.width / 2;
+    let mut lines = input.lines();
+    let first_line = lines.next().unwrap();
+    let width = first_line.len();
+    let start = first_line.find('S').unwrap();
 
-    let mut beams = vec![0u64; grid.width];
-    let mut next_beams = vec![0u64; grid.width];
-    beams[start_col] = 1;
     let mut splits = 0;
+    let mut beams = vec![0; width];
+    let mut next_beams = vec![0; width];
+    beams[start] = 1;
 
-    for row in 1..(grid.height - 1) {
-        next_beams.fill(0);
-        for col in 0..grid.width {
-            if beams[col] == 0 {
-                continue;
-            }
-            match grid[Point::new_usize(row + 1, col)] {
-                '^' => {
+    while let Some(line) = lines.next() {
+        let line = line.as_bytes();
+        beams
+            .iter()
+            .enumerate()
+            .filter(|&(_, &beam)| beam > 0)
+            .for_each(|(col, &beam)| match line[col] {
+                b'^' => {
                     if col > 0 {
-                        next_beams[col - 1] += beams[col];
+                        next_beams[col - 1] += beam;
                     }
-                    if col + 1 < grid.width {
-                        next_beams[col + 1] += beams[col];
+                    if col + 1 < width {
+                        next_beams[col + 1] += beam;
                     }
                     splits += 1;
                 }
-                '.' => {
-                    next_beams[col] += beams[col];
+                b'.' => {
+                    next_beams[col] += beam;
                 }
                 _ => unreachable!(),
-            }
-        }
-        std::mem::swap(&mut beams, &mut next_beams);
+            });
+        (beams, next_beams) = (next_beams, beams);
+        next_beams.fill(0);
     }
 
     let timelines = beams.iter().sum::<u64>();
