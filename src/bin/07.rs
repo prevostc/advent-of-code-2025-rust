@@ -1,5 +1,6 @@
 advent_of_code::solution!(7);
 
+#[allow(unused)]
 fn solve_safe(input: &str) -> (u64, u64) {
     // one of 2 rows is guaranteed to be empty
     let mut lines = input.lines().step_by(2);
@@ -37,6 +38,7 @@ fn solve_safe(input: &str) -> (u64, u64) {
     (splits, timelines)
 }
 
+#[allow(unused)]
 fn solve_safe_col_skip(input: &str) -> (u64, u64) {
     // one of 2 rows is guaranteed to be empty
     let mut lines = input.lines().step_by(2);
@@ -81,6 +83,7 @@ fn solve_safe_col_skip(input: &str) -> (u64, u64) {
     (splits, timelines)
 }
 
+#[allow(unused)]
 #[allow(unsafe_op_in_unsafe_fn)]
 pub unsafe fn solve_single_pass(input: &str) -> (usize, usize) {
     let bytes = input.as_bytes();
@@ -142,6 +145,7 @@ pub unsafe fn solve_single_pass(input: &str) -> (usize, usize) {
     (splits, timelines)
 }
 
+#[allow(unused)]
 #[allow(unsafe_op_in_unsafe_fn)]
 pub unsafe fn solve_bounded_tree_single_pass(input: &str) -> (usize, usize) {
     let bytes = input.as_bytes();
@@ -207,6 +211,7 @@ pub unsafe fn solve_bounded_tree_single_pass(input: &str) -> (usize, usize) {
     (splits, timelines)
 }
 
+#[allow(unused)]
 #[allow(unsafe_op_in_unsafe_fn)]
 pub unsafe fn solve_bounded_tree_single_pass_raw_ptr(input: &str) -> (usize, usize) {
     let len = input.len();
@@ -274,6 +279,7 @@ pub unsafe fn solve_bounded_tree_single_pass_raw_ptr(input: &str) -> (usize, usi
     (splits, timelines)
 }
 
+#[allow(unused)]
 #[allow(unsafe_op_in_unsafe_fn)]
 pub unsafe fn solve_bounded_tree_single_pass_one_beams_array(input: &str) -> (usize, usize) {
     let bytes = input.as_bytes();
