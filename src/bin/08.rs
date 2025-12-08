@@ -1,38 +1,43 @@
 advent_of_code::solution!(8);
 
-fn stream_input(input: &str) -> impl Iterator<Item = Point> {
-    input.lines().map(|line| {
-        let mut r = line.split(',');
-        (
-            r.next().unwrap().parse::<i64>().unwrap(),
-            r.next().unwrap().parse::<i64>().unwrap(),
-            r.next().unwrap().parse::<i64>().unwrap(),
-        ) as Point
-    })
-}
-
+#[inline(always)]
 fn squared_distance(p1: Point, p2: Point) -> i64 {
     (p1.0 - p2.0) * (p1.0 - p2.0) + (p1.1 - p2.1) * (p1.1 - p2.1) + (p1.2 - p2.2) * (p1.2 - p2.2)
 }
 
 type Point = (i64, i64, i64);
 
-fn solve_p1<const CONNECTIONS: usize, const COUNT_THRESHOLD: usize>(input: &str) -> u64 {
-    let input = stream_input(input).collect::<Vec<_>>();
+pub fn parse_input(input: &str) -> (Vec<Point>, Vec<(usize, usize, i64)>) {
+    let points: Vec<Point> = input
+        .lines()
+        .map(|line| {
+            let mut r = line.split(',');
+            (
+                r.next().unwrap().parse::<i64>().unwrap(),
+                r.next().unwrap().parse::<i64>().unwrap(),
+                r.next().unwrap().parse::<i64>().unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let mut distances = Vec::with_capacity(points.len() * (points.len() - 1));
 
-    // TODO: faster init, we don't need to sort all distances, only interested in the first CONNECTIONS ones
-    let mut all_distances = Vec::with_capacity(input.len() * input.len());
-    for i in 0..input.len() {
-        for j in (i + 1)..input.len() {
-            let dst = squared_distance(input[i], input[j]);
-            all_distances.push((i, j, dst));
+    for (i, &p1) in points.iter().enumerate() {
+        for (j, &p2) in points.iter().enumerate().skip(i + 1) {
+            distances.push((i, j, squared_distance(p1, p2)));
         }
     }
-    all_distances.sort_unstable_by_key(|&(_, _, dst)| dst);
+
+    distances.sort_unstable_by_key(|&(.., dst)| dst);
+    (points, distances)
+}
+
+fn solve_p1<const CONNECTIONS: usize, const COUNT_THRESHOLD: usize>(input: &str) -> u64 {
+    let (_, distances) = parse_input(input);
+
     let mut next_circuit_idx = 0;
     let mut circuits = vec![None; input.len()];
 
-    for &(idx, closest_idx, _) in all_distances[..CONNECTIONS].iter() {
+    for &(idx, closest_idx, _) in distances[..CONNECTIONS].iter() {
         match (circuits[idx], circuits[closest_idx]) {
             (Some(circuit_idx), Some(other_circuit_idx)) if circuit_idx == other_circuit_idx => {
                 continue;
@@ -81,22 +86,13 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 fn solve_p2(input: &str) -> u64 {
-    let input = stream_input(input).collect::<Vec<_>>();
+    let (input, distances) = parse_input(input);
 
-    let mut all_distances = Vec::with_capacity(input.len() * (input.len() - 1) / 2);
-    for i in 0..input.len() {
-        for j in (i + 1)..input.len() {
-            let dst = squared_distance(input[i], input[j]);
-            all_distances.push((i, j, dst));
-        }
-    }
-    all_distances.sort_unstable_by_key(|&(_, _, dst)| dst);
     let mut next_circuit_idx = 0;
     let mut circuits = vec![None; input.len()];
-
     let mut last_connection = (0, 0);
 
-    for &(idx, closest_idx, _) in all_distances.iter() {
+    for &(idx, closest_idx, _) in distances.iter() {
         match (circuits[idx], circuits[closest_idx]) {
             (Some(circuit_idx), Some(other_circuit_idx)) if circuit_idx == other_circuit_idx => {
                 continue;
