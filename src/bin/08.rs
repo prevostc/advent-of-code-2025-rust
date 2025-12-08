@@ -1,3 +1,7 @@
+#![feature(binary_heap_into_iter_sorted)]
+
+use std::cmp::Reverse;
+use std::collections::BinaryHeap;
 advent_of_code::solution!(8);
 
 #[inline(always)]
@@ -7,37 +11,34 @@ fn squared_distance(p1: Point, p2: Point) -> i64 {
 
 type Point = (i64, i64, i64);
 
-pub fn parse_input(input: &str) -> (Vec<Point>, Vec<(usize, usize, i64)>) {
-    let points: Vec<Point> = input
-        .lines()
-        .map(|line| {
-            let mut r = line.split(',');
-            (
-                r.next().unwrap().parse::<i64>().unwrap(),
-                r.next().unwrap().parse::<i64>().unwrap(),
-                r.next().unwrap().parse::<i64>().unwrap(),
-            )
-        })
-        .collect::<Vec<_>>();
-    let mut distances = Vec::with_capacity(points.len() * (points.len() - 1));
-
-    for (i, &p1) in points.iter().enumerate() {
-        for (j, &p2) in points.iter().enumerate().skip(i + 1) {
-            distances.push((i, j, squared_distance(p1, p2)));
-        }
-    }
-
-    distances.sort_unstable_by_key(|&(.., dst)| dst);
-    (points, distances)
+fn parse_points_list(input: &str) -> impl Iterator<Item = Point> {
+    input.lines().map(|line| {
+        let mut r = line.split(',');
+        (
+            r.next().unwrap().parse::<i64>().unwrap(),
+            r.next().unwrap().parse::<i64>().unwrap(),
+            r.next().unwrap().parse::<i64>().unwrap(),
+        )
+    })
 }
 
 fn solve_p1<const CONNECTIONS: usize, const COUNT_THRESHOLD: usize>(input: &str) -> u64 {
-    let (_, distances) = parse_input(input);
+    let points = parse_points_list(input).collect::<Vec<_>>();
+    let entries = BinaryHeap::from_iter(points.iter().enumerate().flat_map(|(i, &p1)| {
+        points
+            .iter()
+            .enumerate()
+            .skip(i + 1)
+            // make squared distance the first element to make the heap sort by it
+            .map(move |(j, &p2)| Reverse((squared_distance(p1, p2), i, j)))
+    }));
+
+    let entries = entries.into_iter_sorted().map(|r| (r.0.1, r.0.2));
 
     let mut next_circuit_idx = 0;
     let mut circuits = vec![None; input.len()];
 
-    for &(idx, closest_idx, _) in distances[..CONNECTIONS].iter() {
+    for (idx, closest_idx) in entries.take(CONNECTIONS) {
         match (circuits[idx], circuits[closest_idx]) {
             (Some(circuit_idx), Some(other_circuit_idx)) if circuit_idx == other_circuit_idx => {
                 continue;
@@ -75,9 +76,7 @@ fn solve_p1<const CONNECTIONS: usize, const COUNT_THRESHOLD: usize>(input: &str)
         .collect::<Vec<_>>();
     counts.sort_unstable();
 
-    counts[counts.len() - COUNT_THRESHOLD..]
-        .iter()
-        .product::<u64>()
+    counts.iter().rev().take(COUNT_THRESHOLD).product::<u64>()
 }
 
 #[inline(never)]
@@ -86,13 +85,22 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 fn solve_p2(input: &str) -> u64 {
-    let (input, distances) = parse_input(input);
+    let points = parse_points_list(input).collect::<Vec<_>>();
+    let mut entries = Vec::with_capacity(points.len() * (points.len() - 1));
+
+    for (i, &p1) in points.iter().enumerate() {
+        for (j, &p2) in points.iter().enumerate().skip(i + 1) {
+            entries.push((i, j, squared_distance(p1, p2)));
+        }
+    }
+
+    entries.sort_unstable_by_key(|&(.., dst)| dst);
 
     let mut next_circuit_idx = 0;
     let mut circuits = vec![None; input.len()];
     let mut last_connection = (0, 0);
 
-    for &(idx, closest_idx, _) in distances.iter() {
+    for (idx, closest_idx, _) in entries {
         match (circuits[idx], circuits[closest_idx]) {
             (Some(circuit_idx), Some(other_circuit_idx)) if circuit_idx == other_circuit_idx => {
                 continue;
@@ -122,8 +130,8 @@ fn solve_p2(input: &str) -> u64 {
         }
     }
 
-    let (x1, _, _) = input[last_connection.0];
-    let (x2, _, _) = input[last_connection.1];
+    let (x1, _, _) = points[last_connection.0];
+    let (x2, _, _) = points[last_connection.1];
     return (x1 * x2) as u64;
 }
 
