@@ -4,135 +4,75 @@ use std::cmp::Reverse;
 use std::collections::BinaryHeap;
 advent_of_code::solution!(8);
 
+type Point = (u64, u64, u64);
+
 #[inline(always)]
-fn squared_distance(p1: Point, p2: Point) -> i64 {
-    (p1.0 - p2.0) * (p1.0 - p2.0) + (p1.1 - p2.1) * (p1.1 - p2.1) + (p1.2 - p2.2) * (p1.2 - p2.2)
+fn squared_distance(p1: Point, p2: Point) -> u64 {
+    p1.0.abs_diff(p2.0).pow(2) + p1.1.abs_diff(p2.1).pow(2) + p1.2.abs_diff(p2.2).pow(2)
 }
 
-type Point = (i64, i64, i64);
-
-fn parse_points_list(input: &str) -> impl Iterator<Item = Point> {
-    input.lines().map(|line| {
-        let mut r = line.split(',');
-        (
-            r.next().unwrap().parse::<i64>().unwrap(),
-            r.next().unwrap().parse::<i64>().unwrap(),
-            r.next().unwrap().parse::<i64>().unwrap(),
-        )
-    })
-}
-
-fn solve_p1<const CONNECTIONS: usize, const COUNT_THRESHOLD: usize>(input: &str) -> u64 {
-    let points = parse_points_list(input).collect::<Vec<_>>();
+fn parse_input(input: &str) -> (Vec<Point>, impl Iterator<Item = (usize, usize, u64)>) {
+    let points = input
+        .lines()
+        .map(|line| {
+            let mut r = line.split(',');
+            (
+                r.next().unwrap().parse::<u64>().unwrap(),
+                r.next().unwrap().parse::<u64>().unwrap(),
+                r.next().unwrap().parse::<u64>().unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
     let entries = BinaryHeap::from_iter(points.iter().enumerate().flat_map(|(i, &p1)| {
         points
             .iter()
             .enumerate()
             .skip(i + 1)
-            // make squared distance the first element to make the heap sort by it
             .map(move |(j, &p2)| Reverse((squared_distance(p1, p2), i, j)))
     }));
+    (
+        points,
+        entries.into_iter_sorted().map(|r| (r.0.1, r.0.2, r.0.0)),
+    )
+}
 
-    let entries = entries.into_iter_sorted().map(|r| (r.0.1, r.0.2));
+fn solve_p1<const CONNECTIONS: usize, const COUNT_THRESHOLD: usize>(input: &str) -> u64 {
+    let (points, entries) = parse_input(input);
 
-    let mut next_circuit_idx = 0;
-    let mut circuits = vec![None; input.len()];
+    let mut dsu = aph_disjoint_set::DisjointSetArrayU16::<1000>::new();
+    entries.take(CONNECTIONS).for_each(|(a, b, _)| {
+        dsu.union(a, b);
+    });
 
-    for (idx, closest_idx) in entries.take(CONNECTIONS) {
-        match (circuits[idx], circuits[closest_idx]) {
-            (Some(circuit_idx), Some(other_circuit_idx)) if circuit_idx == other_circuit_idx => {
-                continue;
-            }
-            (Some(circuit_idx), Some(other_circuit_idx)) => {
-                for j in 0..input.len() {
-                    if circuits[j] == Some(other_circuit_idx) {
-                        circuits[j] = Some(circuit_idx);
-                    }
-                }
-            }
-            (None, None) => {
-                circuits[idx] = Some(next_circuit_idx);
-                circuits[closest_idx] = Some(next_circuit_idx);
-                next_circuit_idx += 1;
-            }
-            (Some(circuit_idx), None) => {
-                circuits[closest_idx] = Some(circuit_idx);
-            }
-            (None, Some(circuit_idx)) => {
-                circuits[idx] = Some(circuit_idx);
-            }
-        }
-    }
-
-    // TODO: compute this while building the circuits
-    use std::collections::HashMap;
-    let mut counts = HashMap::new();
-    for b in circuits.iter().filter_map(|b| *b) {
-        *counts.entry(b).or_insert(0u64) += 1;
-    }
-    let mut counts = counts
-        .into_iter()
-        .map(|(_, count)| count)
+    let mut circuits = (0..points.len())
+        .fold(std::collections::HashMap::new(), |mut acc, i| {
+            *acc.entry(dsu.get_root(i)).or_default() += 1;
+            acc
+        })
+        .into_values()
         .collect::<Vec<_>>();
-    counts.sort_unstable();
+    circuits.sort_unstable_by_key(|&circuit| std::cmp::Reverse(circuit));
 
-    counts.iter().rev().take(COUNT_THRESHOLD).product::<u64>()
+    return circuits[0..3].iter().product::<u64>();
+}
+
+fn solve_p2(input: &str) -> u64 {
+    let (points, entries) = parse_input(input);
+
+    let mut dsu = aph_disjoint_set::DisjointSetArrayU16::<1000>::new();
+    let (a, b, _) = entries
+        .into_iter()
+        .take(5 * points.len()) // empirical cutoff
+        .filter(|&(a, b, _)| matches!(dsu.union(a, b), aph_disjoint_set::UnionResult::Success))
+        .last()
+        .unwrap();
+
+    return points[a].0 * points[b].0;
 }
 
 #[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
     Some(solve_p1::<1000, 3>(input))
-}
-
-fn solve_p2(input: &str) -> u64 {
-    let points = parse_points_list(input).collect::<Vec<_>>();
-    let mut entries = Vec::with_capacity(points.len() * (points.len() - 1));
-
-    for (i, &p1) in points.iter().enumerate() {
-        for (j, &p2) in points.iter().enumerate().skip(i + 1) {
-            entries.push((i, j, squared_distance(p1, p2)));
-        }
-    }
-
-    entries.sort_unstable_by_key(|&(.., dst)| dst);
-
-    let mut next_circuit_idx = 0;
-    let mut circuits = vec![None; input.len()];
-    let mut last_connection = (0, 0);
-
-    for (idx, closest_idx, _) in entries {
-        match (circuits[idx], circuits[closest_idx]) {
-            (Some(circuit_idx), Some(other_circuit_idx)) if circuit_idx == other_circuit_idx => {
-                continue;
-            }
-            (Some(circuit_idx), Some(other_circuit_idx)) => {
-                last_connection = (idx, closest_idx);
-                for j in 0..input.len() {
-                    if circuits[j] == Some(other_circuit_idx) {
-                        circuits[j] = Some(circuit_idx);
-                    }
-                }
-            }
-            (None, None) => {
-                circuits[idx] = Some(next_circuit_idx);
-                circuits[closest_idx] = Some(next_circuit_idx);
-                next_circuit_idx += 1;
-                last_connection = (idx, closest_idx);
-            }
-            (Some(circuit_idx), None) => {
-                circuits[closest_idx] = Some(circuit_idx);
-                last_connection = (idx, closest_idx);
-            }
-            (None, Some(circuit_idx)) => {
-                circuits[idx] = Some(circuit_idx);
-                last_connection = (idx, closest_idx);
-            }
-        }
-    }
-
-    let (x1, _, _) = points[last_connection.0];
-    let (x2, _, _) = points[last_connection.1];
-    return (x1 * x2) as u64;
 }
 
 #[inline(never)]

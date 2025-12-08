@@ -21,6 +21,7 @@ checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 name = "advent_of_code"
 version = "0.12.0"
 dependencies = [
+ "aph_disjoint_set",
  "chrono",
  "dhat",
  "mygrid",
@@ -45,6 +46,12 @@ checksum = "819e7219dbd41043ac279b19830f2efc897156490d7fd6ea916720117ee66311"
 dependencies = [
  "libc",
 ]
+
+[[package]]
+name = "aph_disjoint_set"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec916e7c5883e65b44aead1b3b77c144e518686472524896868cb00366937c08"
 
 [[package]]
 name = "autocfg"
