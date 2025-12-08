@@ -11,7 +11,7 @@ fn squared_distance(p1: Point, p2: Point) -> u64 {
     p1.0.abs_diff(p2.0).pow(2) + p1.1.abs_diff(p2.1).pow(2) + p1.2.abs_diff(p2.2).pow(2)
 }
 
-fn parse_input(input: &str) -> (Vec<Point>, impl Iterator<Item = (usize, usize, u64)>) {
+fn parse_input(input: &str) -> (Vec<Point>, impl Iterator<Item = (usize, usize)>) {
     let points = input
         .lines()
         .map(|line| {
@@ -30,17 +30,14 @@ fn parse_input(input: &str) -> (Vec<Point>, impl Iterator<Item = (usize, usize, 
             .skip(i + 1)
             .map(move |(j, &p2)| Reverse((squared_distance(p1, p2), i, j)))
     }));
-    (
-        points,
-        entries.into_iter_sorted().map(|r| (r.0.1, r.0.2, r.0.0)),
-    )
+    (points, entries.into_iter_sorted().map(|r| (r.0.1, r.0.2)))
 }
 
-fn solve_p1<const CONNECTIONS: usize, const COUNT_THRESHOLD: usize>(input: &str) -> u64 {
+fn solve_p1<const CONNECTIONS: usize>(input: &str) -> u64 {
     let (points, entries) = parse_input(input);
 
     let mut dsu = aph_disjoint_set::DisjointSetArrayU16::<1000>::new();
-    entries.take(CONNECTIONS).for_each(|(a, b, _)| {
+    entries.take(CONNECTIONS).for_each(|(a, b)| {
         dsu.union(a, b);
     });
 
@@ -60,10 +57,10 @@ fn solve_p2(input: &str) -> u64 {
     let (points, entries) = parse_input(input);
 
     let mut dsu = aph_disjoint_set::DisjointSetArrayU16::<1000>::new();
-    let (a, b, _) = entries
+    let (a, b) = entries
         .into_iter()
         .take(5 * points.len()) // empirical cutoff
-        .filter(|&(a, b, _)| matches!(dsu.union(a, b), aph_disjoint_set::UnionResult::Success))
+        .filter(|&(a, b)| matches!(dsu.union(a, b), aph_disjoint_set::UnionResult::Success))
         .last()
         .unwrap();
 
@@ -72,7 +69,7 @@ fn solve_p2(input: &str) -> u64 {
 
 #[inline(never)]
 pub fn part_one(input: &str) -> Option<u64> {
-    Some(solve_p1::<1000, 3>(input))
+    Some(solve_p1::<1000>(input))
 }
 
 #[inline(never)]
@@ -87,7 +84,7 @@ mod tests {
     #[test]
     fn test_part_one() {
         let input = advent_of_code::template::read_file("examples", DAY);
-        let result = solve_p1::<10, 3>(&input);
+        let result = solve_p1::<10>(&input);
         assert_eq!(result, 40);
     }
 
