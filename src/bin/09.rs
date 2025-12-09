@@ -1,5 +1,3 @@
-use std::cmp::Reverse;
-
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 advent_of_code::solution!(9);
