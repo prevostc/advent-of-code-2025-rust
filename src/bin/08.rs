@@ -1,35 +1,41 @@
 #![feature(binary_heap_into_iter_sorted)]
 
+use kdtree::KdTree;
+use kdtree::distance::squared_euclidean;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
+
 advent_of_code::solution!(8);
 
-type Point = (u64, u64, u64);
-
-#[inline(always)]
-fn squared_distance(p1: Point, p2: Point) -> u64 {
-    p1.0.abs_diff(p2.0).pow(2) + p1.1.abs_diff(p2.1).pow(2) + p1.2.abs_diff(p2.2).pow(2)
-}
-
-fn parse_input(input: &str) -> (Vec<Point>, impl Iterator<Item = (usize, usize)>) {
+fn parse_input(input: &str) -> (Vec<[f64; 3]>, impl Iterator<Item = (usize, usize)>) {
     let points = input
         .lines()
         .map(|line| {
             let mut r = line.split(',');
-            (
-                r.next().unwrap().parse::<u64>().unwrap(),
-                r.next().unwrap().parse::<u64>().unwrap(),
-                r.next().unwrap().parse::<u64>().unwrap(),
-            )
+            [
+                r.next().unwrap().parse::<u64>().unwrap() as f64,
+                r.next().unwrap().parse::<u64>().unwrap() as f64,
+                r.next().unwrap().parse::<u64>().unwrap() as f64,
+            ]
         })
         .collect::<Vec<_>>();
+
+    let mut kdtree = KdTree::new(3);
+    for (i, p) in points.iter().enumerate() {
+        kdtree.add(p, i).unwrap();
+    }
+
     let entries = BinaryHeap::from_iter(points.iter().enumerate().flat_map(|(i, &p1)| {
-        points
-            .iter()
-            .enumerate()
-            .skip(i + 1)
-            .map(move |(j, &p2)| Reverse((squared_distance(p1, p2), i, j)))
+        kdtree
+            .iter_nearest_mut(&p1, &squared_euclidean)
+            .unwrap()
+            .skip(1) // skip self
+            .take(10) // empirical cutoff
+            .map(|(d, ni)| Reverse((d as u64, i, *ni)))
+            .filter(|r| r.0.1 > r.0.2) // skip duplicates
+            .collect::<Vec<_>>()
     }));
+
     (points, entries.into_iter_sorted().map(|r| (r.0.1, r.0.2)))
 }
 
@@ -59,12 +65,12 @@ fn solve_p2(input: &str) -> u64 {
     let mut dsu = aph_disjoint_set::DisjointSetArrayU16::<1000>::new();
     let (a, b) = entries
         .into_iter()
-        .take(5 * points.len()) // empirical cutoff
+        // .take(5 * points.len()) // empirical cutoff
         .filter(|&(a, b)| matches!(dsu.union(a, b), aph_disjoint_set::UnionResult::Success))
         .last()
         .unwrap();
 
-    return points[a].0 * points[b].0;
+    return points[a][0] as u64 * points[b][0] as u64;
 }
 
 #[inline(never)]
