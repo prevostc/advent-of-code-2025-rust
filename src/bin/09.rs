@@ -2,6 +2,11 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 advent_of_code::solution!(9);
 
+////////////////////////////////////////////////////////////////
+///  Helper functions
+////////////////////////////////////////////////////////////////
+
+#[inline(always)]
 fn parse_input(input: &str) -> Vec<(i64, i64)> {
     input
         .lines()
@@ -17,6 +22,50 @@ fn compute_area(p1: &(i64, i64), p2: &(i64, i64)) -> i64 {
     width * height
 }
 
+#[inline(always)]
+fn bbox(p1: &(i64, i64), p2: &(i64, i64)) -> [i64; 4] {
+    [
+        p1.0.min(p2.0), // xmin
+        p1.0.max(p2.0), // xmax
+        p1.1.min(p2.1), // ymin
+        p1.1.max(p2.1), // ymax
+    ]
+}
+
+#[inline(always)]
+fn bbox_intersects_line(&[bxmin, bxmax, bymin, bymax]: &[i64; 4], line: &[(i64, i64); 2]) -> bool {
+    let [lxmin, lxmax, lymin, lymax] = bbox(&line[0], &line[1]);
+    if lxmin == lxmax {
+        // is a vertical line
+        if lxmin > bxmin && lxmax < bxmax {
+            // vertical line is inside bbox vertical bounds
+            if !(lymax <= bymin || lymin >= bymax) {
+                // vertical line intersects with bbox
+                return true;
+            }
+        }
+    }
+
+    if lymin == lymax {
+        // is a horizontal line
+        if lymin > bymin && lymax < bymax {
+            // horizontal line is inside bbox horizontal bounds
+            if !(lxmax <= bxmin || lxmin >= bxmax) {
+                // horizontal line intersects with bbox
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+////////////////////////////////////////////////////////////////
+///  Brute force solutions
+///     Use the brute force approach to solve the problem
+///     Works for all inputs but is a tad slow (~20ms for part 2)
+////////////////////////////////////////////////////////////////
+
 pub fn part_one_brute(input: &str) -> Option<i64> {
     let pos = parse_input(input);
 
@@ -31,14 +80,56 @@ pub fn part_one_brute(input: &str) -> Option<i64> {
     Some(max_area)
 }
 
-fn build_cheat_index(pos: &[(i64, i64)]) -> [Vec<&(i64, i64)>; 4] {
+pub fn part_two_brute(input: &str) -> Option<i64> {
+    let mut pos = parse_input(input);
+
+    // compute all the possible rectangles and sort by area descending
+    let mut rectangles = Vec::with_capacity(pos.len() * pos.len());
+    for i in 0..pos.len() {
+        for j in 0..pos.len() {
+            let area = compute_area(&pos[i], &pos[j]);
+            rectangles.push((pos[i], pos[j], area));
+        }
+    }
+    // rectangles.sort_by_key(|(_, _, area)| Reverse(*area));
+
+    pos.push(pos[0]); // make it a closed polygon
+
+    // pairs of points are lines, find the largest rectangle that doesn't intersect with a line
+    let max_area = rectangles
+        .par_iter()
+        .map(|(p1, p2, area)| (bbox(p1, p2), area))
+        .filter(|&([bxmin, bxmax, bymin, bymax], _)| {
+            !pos.windows(2).any(|w| {
+                bbox_intersects_line(
+                    &[bxmin, bxmax, bymin, bymax],
+                    &[(w[0].0, w[0].1), (w[1].0, w[1].1)],
+                )
+            })
+        })
+        .map(|(_, area)| *area)
+        .max()?;
+
+    Some(max_area)
+}
+
+////////////////////////////////////////////////////////////////
+///  Cheated solutions
+///     Use the shape of the input to make the solution faster
+////////////////////////////////////////////////////////////////
+
+#[inline(always)]
+fn build_cheat_index<F>(pos: &[(i64, i64)], get_cutoff: F) -> [Vec<&(i64, i64)>; 4]
+where
+    F: Fn(i64, i64) -> (i64, i64),
+{
     let capacity = pos.len();
     let [xmin, xmax, ymin, ymax] = pos.iter().fold(
         [i64::MAX, i64::MIN, i64::MAX, i64::MIN],
         |[xmin, xmax, ymin, ymax], (x, y)| [xmin.min(*x), xmax.max(*x), ymin.min(*y), ymax.max(*y)],
     );
     let [xmid, ymid] = [(xmin + xmax) / 2, (ymin + ymax) / 2];
-    let [xcutoff, ycutoff] = [xmax / 10, ymax / 10];
+    let (xcutoff, ycutoff) = get_cutoff(xmax, ymax);
 
     let mut index = [
         Vec::with_capacity(capacity), // top left
@@ -60,7 +151,7 @@ fn build_cheat_index(pos: &[(i64, i64)]) -> [Vec<&(i64, i64)>; 4] {
 
 pub fn part_one_cheated(input: &str) -> Option<i64> {
     let pos = parse_input(input);
-    let corners = build_cheat_index(&pos);
+    let corners = build_cheat_index(&pos, |xmax, ymax| (xmax / 10, ymax / 10));
 
     // the input draws a big circle with an horizontal cut off
     // only look at points in opposite corners of the map
@@ -84,94 +175,9 @@ pub fn part_one_cheated(input: &str) -> Option<i64> {
     Some(max_area)
 }
 
-#[inline(always)]
-fn bbox(p1: &(i64, i64), p2: &(i64, i64)) -> [i64; 4] {
-    [
-        p1.0.min(p2.0), // xmin
-        p1.0.max(p2.0), // xmax
-        p1.1.min(p2.1), // ymin
-        p1.1.max(p2.1), // ymax
-    ]
-}
-
-#[inline(never)]
-pub fn part_two_brute(input: &str) -> Option<i64> {
-    let mut pos = parse_input(input);
-
-    // compute all the possible rectangles and sort by area descending
-    let mut rectangles = Vec::with_capacity(pos.len() * pos.len());
-    for i in 0..pos.len() {
-        for j in 0..pos.len() {
-            let area = compute_area(&pos[i], &pos[j]);
-            rectangles.push((pos[i], pos[j], area));
-        }
-    }
-    // rectangles.sort_by_key(|(_, _, area)| Reverse(*area));
-
-    pos.push(pos[0]); // make it a closed polygon
-
-    // pairs of points are lines, find the largest rectangle that doesn't intersect with a line
-    let max_area = rectangles
-        .par_iter()
-        .map(|(p1, p2, area)| {
-            let [bxmin, bxmax, bymin, bymax] = bbox(p1, p2);
-            for w in pos.windows(2) {
-                let [lxmin, lxmax, lymin, lymax] = bbox(&w[0], &w[1]);
-                if lxmin == lxmax {
-                    // is a vertical line
-                    if lxmin > bxmin && lxmax < bxmax {
-                        // vertical line is inside bbox vertical bounds
-                        if !(lymax <= bymin || lymin >= bymax) {
-                            // vertical line intersects with bbox
-                            return None;
-                        }
-                    }
-                }
-
-                if lymin == lymax {
-                    // is a horizontal line
-                    if lymin > bymin && lymax < bymax {
-                        // horizontal line is inside bbox horizontal bounds
-                        if !(lxmax <= bxmin || lxmin >= bxmax) {
-                            // horizontal line intersects with bbox
-                            return None;
-                        }
-                    }
-                }
-            }
-
-            Some(*area)
-        })
-        .filter_map(|area| area)
-        .max()?;
-
-    Some(max_area)
-}
-
 pub fn part_two_cheated(input: &str) -> Option<i64> {
     let pos = parse_input(input);
-    let capacity = pos.len();
-    let [xmin, xmax, ymin, ymax] = pos.iter().fold(
-        [i64::MAX, i64::MIN, i64::MAX, i64::MIN],
-        |[xmin, xmax, ymin, ymax], (x, y)| [xmin.min(*x), xmax.max(*x), ymin.min(*y), ymax.max(*y)],
-    );
-    let [xmid, ymid] = [(xmin + xmax) / 2, (ymin + ymax) / 2];
-
-    let mut corners = [
-        Vec::with_capacity(capacity), // top left
-        Vec::with_capacity(capacity), // top right
-        Vec::with_capacity(capacity), // bottom left
-        Vec::with_capacity(capacity), // bottom right
-    ];
-
-    for p in pos
-        .iter()
-        // remove points too close to the horizontal center line, empirical cutoff
-        .filter(|p| (p.0 - xmid).abs() > 20000)
-    {
-        let idx = (p.0 > xmid) as usize * 2 + (p.1 > ymid) as usize;
-        corners[idx].push(p);
-    }
+    let corners = build_cheat_index(&pos, |_, _| (20000, 0));
 
     let mut rectangles = Vec::with_capacity(corners[0].len() * corners[1].len());
     for a in corners[0].iter() {
@@ -191,43 +197,27 @@ pub fn part_two_cheated(input: &str) -> Option<i64> {
     // pairs of points are lines, find the largest rectangle that doesn't intersect with a line
     let max_area = rectangles
         .par_iter()
-        .map(|(p1, p2, area, idxs)| {
-            let [bxmin, bxmax, bymin, bymax] = bbox(p1, p2);
-            for w in corners[idxs[0]]
+        .map(|(p1, p2, area, idxs)| (bbox(p1, p2), area, idxs))
+        .filter(|&([bxmin, bxmax, bymin, bymax], _, idxs)| {
+            !corners[idxs[0]]
                 .windows(2)
                 .chain(corners[idxs[1]].windows(2))
-            {
-                let [lxmin, lxmax, lymin, lymax] = bbox(&w[0], &w[1]);
-                if lxmin == lxmax {
-                    // is a vertical line
-                    if lxmin > bxmin && lxmax < bxmax {
-                        // vertical line is inside bbox vertical bounds
-                        if !(lymax <= bymin || lymin >= bymax) {
-                            // vertical line intersects with bbox
-                            return None;
-                        }
-                    }
-                }
-
-                if lymin == lymax {
-                    // is a horizontal line
-                    if lymin > bymin && lymax < bymax {
-                        // horizontal line is inside bbox horizontal bounds
-                        if !(lxmax <= bxmin || lxmin >= bxmax) {
-                            // horizontal line intersects with bbox
-                            return None;
-                        }
-                    }
-                }
-            }
-
-            Some(*area)
+                .any(|w| {
+                    bbox_intersects_line(
+                        &[bxmin, bxmax, bymin, bymax],
+                        &[(w[0].0, w[0].1), (w[1].0, w[1].1)],
+                    )
+                })
         })
-        .filter_map(|area| area)
+        .map(|(_, area, _)| *area)
         .max()?;
 
     Some(max_area)
 }
+
+////////////////////////////////////////////////////////////////
+///  Entry point
+////////////////////////////////////////////////////////////////
 
 #[inline(never)]
 pub fn part_one(input: &str) -> Option<i64> {
