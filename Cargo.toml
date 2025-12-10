@@ -33,6 +33,7 @@ mygrid = { version = "0.0.1", path = "mygrid" }
 rustc-hash = "2.1.1"
 aph_disjoint_set = "0.1.1"
 kdtree = "0.8.0"
+z3 = {version="0.19.5", features = ["gh-release"]}
 
 # Solution dependencies
 
